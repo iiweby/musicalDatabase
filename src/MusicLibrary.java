@@ -1,5 +1,4 @@
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -14,11 +13,11 @@ public class MusicLibrary {
         int choice;
 
         do {
-            System.out.println("\n Music Matcher Library!");
+            System.out.println("\n Music Profile Library!!");
             System.out.println("1. Add Music Profile");
-            System.out.println("2. View Favorited Songs");
-            System.out.println("3. Update Favorite Song");
-            System.out.println("4. Delete Song");
+            System.out.println("2. View Others Favorite Songs");
+            System.out.println("3. Update Profiles");
+            System.out.println("4. Delete Profile");
             System.out.println("5. Exit"); 
             System.out.print("Enter your choice: ");
             choice = scanner.nextInt();
@@ -97,15 +96,72 @@ public class MusicLibrary {
     }
 
     public static void viewSongs() throws SQLException {
-        
+        Connection conn = DatabaseConnection.getConnection();
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT * FROM MusicGenre");
+    
+        System.out.println("\nList of Songs:");
+        System.out.println("ID\tTitle\tArtist\tGenre");
+    
+        while (rs.next()) {
+            int id = rs.getInt("genreID");
+            String title = rs.getString("genreName");
+            String artist = rs.getString("favoriteArtist");
+            String genre = rs.getString("favoriteSong");
+            System.out.println(id + "\t" + title + "\t" + artist + "\t" + genre);
+        }
+    
+        stmt.close();
+        conn.close();
     }
+    
 
     public static void updateSong() throws SQLException {
-        
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter the ID of the song you want to update: ");
+        int id = scanner.nextInt();
+        scanner.nextLine();
+    
+        System.out.println("Enter the new title: ");
+        String newTitle = scanner.nextLine();
+        System.out.println("Enter the new artist: ");
+        String newArtist = scanner.nextLine();
+        System.out.println("Enter the new genre: ");
+        String newGenre = scanner.nextLine();
+    
+        Connection conn = DatabaseConnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement("UPDATE MusicGenre SET genreName=?, favoriteArtist=?, favoriteSong=? WHERE genreID=?");
+        pstmt.setString(1, newTitle);
+        pstmt.setString(2, newArtist);
+        pstmt.setString(3, newGenre);
+        pstmt.setInt(4, id);
+        pstmt.executeUpdate();
+    
+        System.out.println("Song updated successfully.");
+
+        viewSongs();
+    
+        pstmt.close();
+        conn.close();
     }
+    
+    
 
     public static void deleteSong() throws SQLException {
-        
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter the ID of the profile you want to delete: ");
+        int id = scanner.nextInt();
+    
+        Connection conn = DatabaseConnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement("DELETE FROM MusicGenre WHERE genreID=?");
+        pstmt.setInt(1, id);
+        pstmt.executeUpdate();
+    
+        System.out.println("Profile deleted successfully.");
+    
+        pstmt.close();
+        conn.close();
     }
+    
 
 }
