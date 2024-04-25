@@ -1,9 +1,11 @@
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
@@ -31,6 +33,9 @@ public class MusicLibraryGUI extends Application {
 
         Button viewButton = new Button("View Profiles");
         viewButton.setOnAction(e -> viewSongs());
+
+        Button updateButton = new Button("Update Profile");
+        updateButton.setOnAction(e -> updateProfileDialog());
 
         // Instantiate the tableView
         tableView = new TableView<>();
@@ -74,12 +79,14 @@ public class MusicLibraryGUI extends Application {
         tableView.getColumns().add(artistColumn);
         tableView.getColumns().add(songColumn);
 
+        HBox buttonBox = new HBox(); 
+        buttonBox.getChildren().addAll(addButton, deleteButton, updateButton, viewButton); 
+        buttonBox.setSpacing(10);
 
+        
         VBox vbox = new VBox();
         vbox.getChildren().addAll(
-                addButton,
-                deleteButton,
-                viewButton,
+                buttonBox, 
                 tableView
         );
         vbox.setSpacing(10);
@@ -89,9 +96,131 @@ public class MusicLibraryGUI extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
     }
-    
-    
 
+    
+    
+    private void updateProfileDialog() {
+        Song selectedSong = tableView.getSelectionModel().getSelectedItem();
+        if (selectedSong != null) {
+            Dialog<Song> dialog = new Dialog<>();
+            dialog.setTitle("Update Profile");
+            dialog.setHeaderText("Update Profile for ID: " + selectedSong.getId());
+
+            // Set the button types
+            ButtonType updateButtonType = new ButtonType("Update", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(updateButtonType, ButtonType.CANCEL);
+
+            // Create the labels and fields
+            TextField nameField = new TextField();
+            nameField.setText(selectedSong.getName());
+            TextField ageField = new TextField();
+            ageField.setText(String.valueOf(selectedSong.getAge()));
+            TextField emailField = new TextField();
+            emailField.setText(selectedSong.getEmail());
+            TextField majorField = new TextField();
+            majorField.setText(selectedSong.getMajor());
+            TextField platformField = new TextField();
+            platformField.setText(selectedSong.getPlatform());
+            TextField genreField = new TextField();
+            genreField.setText(selectedSong.getGenre());
+            TextField artistField = new TextField();
+            artistField.setText(selectedSong.getArtist());
+            TextField songField = new TextField();
+            songField.setText(selectedSong.getSong());
+
+            // Set the content of dialog
+            VBox content = new VBox();
+            content.getChildren().addAll(
+                    new Label("Name:"),
+                    nameField,
+                    new Label("Age:"),
+                    ageField,
+                    new Label("Email:"),
+                    emailField,
+                    new Label("Major:"),
+                    majorField,
+                    new Label("Streaming Platform:"),
+                    platformField,
+                    new Label("Favorite Genre:"),
+                    genreField,
+                    new Label("Favorite Artist:"),
+                    artistField,
+                    new Label("Favorite Song:"),
+                    songField
+            );
+            content.setSpacing(10);
+            dialog.getDialogPane().setContent(content);
+
+            // Request focus on the username field by default
+            Platform.runLater(nameField::requestFocus);
+
+            // Convert the result to a profile when the update button is clicked
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == updateButtonType) {
+                    return new Song(
+                            selectedSong.getId(),
+                            nameField.getText(),
+                            Integer.parseInt(ageField.getText()),
+                            emailField.getText(),
+                            majorField.getText(),
+                            platformField.getText(),
+                            genreField.getText(),
+                            artistField.getText(),
+                            songField.getText()
+                    );
+                }
+                return null;
+            });
+
+            // Show the dialog and wait for the response
+            dialog.showAndWait().ifPresent(this::updateProfile);
+        } else {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("No Profile Selected");
+            alert.setHeaderText("Please select a profile to update.");
+            alert.showAndWait();
+        }
+    }
+    private void updateProfile(Song updatedProfile) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            
+            // Update the Friend table
+            String updateFriendQuery = "UPDATE Friend SET name = ?, age = ?, email = ? WHERE id = ?";
+            PreparedStatement pstmtFriend = conn.prepareStatement(updateFriendQuery);
+            pstmtFriend.setString(1, updatedProfile.getName());
+            pstmtFriend.setInt(2, updatedProfile.getAge());
+            pstmtFriend.setString(3, updatedProfile.getEmail());
+            pstmtFriend.setInt(4, updatedProfile.getId());
+            pstmtFriend.executeUpdate();
+            
+            // Update the Interest table
+            String updateInterestQuery = "UPDATE Interest SET major = ?, streamingPlatform = ? WHERE id = ?";
+            PreparedStatement pstmtInterest = conn.prepareStatement(updateInterestQuery);
+            pstmtInterest.setString(1, updatedProfile.getMajor());
+            pstmtInterest.setString(2, updatedProfile.getPlatform());
+            pstmtInterest.setInt(3, updatedProfile.getId());
+            pstmtInterest.executeUpdate();
+            
+            // Update the MusicGenre table
+            String updateGenreQuery = "UPDATE MusicGenre SET genreName = ?, favoriteArtist = ?, favoriteSong = ? WHERE id = ?";
+            PreparedStatement pstmtGenre = conn.prepareStatement(updateGenreQuery);
+            pstmtGenre.setString(1, updatedProfile.getGenre());
+            pstmtGenre.setString(2, updatedProfile.getArtist());
+            pstmtGenre.setString(3, updatedProfile.getSong());
+            pstmtGenre.setInt(4, updatedProfile.getId());
+            pstmtGenre.executeUpdate();
+            
+            System.out.println("Profile with ID " + updatedProfile.getId() + " updated successfully.");
+            
+            pstmtFriend.close();
+            pstmtInterest.close();
+            pstmtGenre.close();
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
     
 
     private void viewSongs() {
